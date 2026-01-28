@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, Suspense } from 'react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Brain, ArrowLeft, Zap, Youtube, Search as SearchIcon, RefreshCw } from 'lucide-react'
 import { SearchBar, LoadingState, ResultCard } from '@/components'
@@ -130,8 +131,13 @@ function SearchInterface() {
           <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
             {/* Logo / Title */}
             <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 mb-6 shadow-lg shadow-amber-500/25">
-                <Brain className="w-10 h-10 text-black" />
+              <div className="relative w-24 h-24 mb-6 mx-auto rounded-full overflow-hidden border-2 border-amber-500/50 shadow-lg shadow-amber-500/25">
+                <Image
+                  src="/samparr.jpg"
+                  alt="Sam Parr"
+                  fill
+                  className="object-cover"
+                />
               </div>
               <h1 className="text-5xl md:text-6xl font-bold mb-4">
                 <span className="text-white">Sam</span>
