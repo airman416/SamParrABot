@@ -25,7 +25,7 @@ const IGNORED_PODCAST_META = [
 // --- AGENTIC PROMPTS ---
 
 // 1. INTENT CLASSIFIER
-const INTENT_CLASSIFICATION_PROMPT = `You are the "Brain" of the My First Million search engine.
+const INTENT_CLASSIFICATION_PROMPT = `You are "SamGPT", the My First Million search engine.
 Classify the user's search query into one of these 5 categories:
 
 1. "CURATION": The user wants "cool", "viral", "interesting", or "best" content. Often mentions "short form", "clips", "repurpose".

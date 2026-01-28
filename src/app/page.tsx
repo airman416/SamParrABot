@@ -134,8 +134,8 @@ function SearchInterface() {
                 <Brain className="w-10 h-10 text-black" />
               </div>
               <h1 className="text-5xl md:text-6xl font-bold mb-4">
-                <span className="text-white">Sam&apos;s</span>{' '}
-                <span className="bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 bg-clip-text text-transparent">Brain</span>
+                <span className="text-white">Sam</span>
+                <span className="bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 bg-clip-text text-transparent">GPT</span>
               </h1>
               <p className="text-xl text-zinc-400 max-w-lg mx-auto">
                 AI-powered search through every Sam Parr quote from{' '}

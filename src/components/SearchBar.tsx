@@ -42,7 +42,7 @@ export function SearchBar({ value, onChange, onSubmit, disabled, placeholder }: 
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         disabled={disabled}
-                        placeholder={placeholder || "Ask Sam's Brain: 'Find contrarian business ideas...'"}
+                        placeholder={placeholder || "Ask SamGPT: 'Find contrarian business ideas...'"}
                         className={cn(
                             "w-full py-5 pl-14 pr-14",
                             "bg-transparent",
