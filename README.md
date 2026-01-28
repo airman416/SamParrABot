@@ -2,7 +2,7 @@
 
 > AI-powered semantic search through every Sam Parr quote from the **My First Million** podcast.
 
-![Sam Parr - From Hotdogs to $30M](frontend/image.png)
+![Sam Parr - From Hotdogs to $30M](/image.png)
 
 ## What is this?
 
