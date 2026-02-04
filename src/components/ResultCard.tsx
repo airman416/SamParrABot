@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock, ExternalLink, Play, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { Clock, ExternalLink, Play, ChevronDown, ChevronUp, Sparkles, Scissors } from 'lucide-react'
 import { cn, formatTimestamp, getMatchLevel } from '@/lib/utils'
 import type { SearchResult } from '@/lib/types'
 
@@ -12,11 +12,46 @@ interface ResultCardProps {
 
 export function ResultCard({ result, index }: ResultCardProps) {
     const [isExpanded, setIsExpanded] = useState(false)
+    const [isClipping, setIsClipping] = useState(false)
     const matchLevel = getMatchLevel(result.similarity)
 
     // Extract YouTube video ID for embed
     const videoId = result.episode_id
     const timestamp = Math.floor(result.start_timestamp)
+
+    const handleClip = async () => {
+        setIsClipping(true)
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
+            const response = await fetch(`${API_URL}/clip`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    video_id: videoId,
+                    start_time: timestamp
+                })
+            })
+
+            if (!response.ok) throw new Error('Clipping failed')
+
+            // Trigger file download
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `sam_parr_clip_${videoId}.mp4`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+
+        } catch (error) {
+            console.error('Clipping error:', error)
+            alert('Failed to generate clip. Please try again.')
+        } finally {
+            setIsClipping(false)
+        }
+    }
     const embedUrl = `https://www.youtube.com/embed/${videoId}?start=${timestamp}&rel=0`
     const watchUrl = result.url || `https://www.youtube.com/watch?v=${videoId}&t=${timestamp}s`
 
@@ -117,23 +152,51 @@ export function ResultCard({ result, index }: ResultCardProps) {
 
             {/* Footer: Watch on YouTube */}
             <div className="p-4 border-t border-zinc-800/50">
-                <a
-                    href={watchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                        "flex items-center justify-center gap-2",
-                        "w-full py-3 rounded-xl",
-                        "bg-red-600/10 text-red-400",
-                        "hover:bg-red-600/20 hover:text-red-300",
-                        "transition-all duration-200",
-                        "font-medium"
-                    )}
-                >
-                    <Play className="w-4 h-4" />
-                    Watch on YouTube
-                    <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                </a>
+                <div className="flex gap-3">
+                    <a
+                        href={watchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2",
+                            "py-3 rounded-xl",
+                            "bg-red-600/10 text-red-400",
+                            "hover:bg-red-600/20 hover:text-red-300",
+                            "transition-all duration-200",
+                            "font-medium"
+                        )}
+                    >
+                        <Play className="w-4 h-4" />
+                        Watch
+                        <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                    </a>
+
+                    <button
+                        onClick={handleClip}
+                        disabled={isClipping}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2",
+                            "py-3 rounded-xl",
+                            "bg-amber-500/10 text-amber-500",
+                            "hover:bg-amber-500/20 hover:text-amber-400",
+                            "transition-all duration-200",
+                            "font-medium",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                    >
+                        {isClipping ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Clipping...
+                            </>
+                        ) : (
+                            <>
+                                <Scissors className="w-4 h-4" />
+                                Get Clip
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     )
