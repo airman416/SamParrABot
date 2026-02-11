@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Clock, Users, Sparkles } from 'lucide-react'
+import { Download, Clock, Users, Sparkles, Monitor, Smartphone } from 'lucide-react'
 import { cn, formatTimestamp } from '@/lib/utils'
 
 export interface ViralClip {
@@ -18,15 +18,17 @@ interface ClipCardProps {
     index: number
 }
 
+type AspectRatio = '16:9' | '9:16'
+
 export function ClipCard({ clip, videoId, index }: ClipCardProps) {
-    const [isDownloading, setIsDownloading] = useState(false)
+    const [downloadingAR, setDownloadingAR] = useState<AspectRatio | null>(null)
 
     const startSeconds = Math.floor(clip.start_time)
     const duration = Math.round(clip.end_time - clip.start_time)
     const embedUrl = `https://www.youtube.com/embed/${videoId}?start=${startSeconds}&rel=0`
 
-    const handleDownload = async () => {
-        setIsDownloading(true)
+    const handleDownload = async (aspectRatio: AspectRatio) => {
+        setDownloadingAR(aspectRatio)
         try {
             const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
             const response = await fetch(`${API_URL}/clip`, {
@@ -36,16 +38,18 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
                     video_id: videoId,
                     start_time: clip.start_time,
                     duration: duration,
+                    aspect_ratio: aspectRatio,
                 }),
             })
 
             if (!response.ok) throw new Error('Download failed')
 
+            const arLabel = aspectRatio === '9:16' ? 'portrait' : 'landscape'
             const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `viral_clip_${videoId}_${index + 1}.mp4`
+            a.download = `viral_clip_${videoId}_${index + 1}_${arLabel}.mp4`
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -54,7 +58,7 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
             console.error('Download error:', error)
             alert('Failed to download clip. Please try again.')
         } finally {
-            setIsDownloading(false)
+            setDownloadingAR(null)
         }
     }
 
@@ -119,35 +123,67 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
                 />
             </div>
 
-            {/* Download Button */}
+            {/* Download Buttons */}
             <div className="p-4 border-t border-zinc-800/50">
-                <button
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className={cn(
-                        "w-full flex items-center justify-center gap-2",
-                        "py-3 rounded-xl",
-                        "bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20",
-                        "border border-amber-500/30",
-                        "text-amber-400 font-medium",
-                        "hover:from-amber-500/30 hover:via-yellow-500/30 hover:to-amber-500/30",
-                        "hover:border-amber-500/50 hover:text-amber-300",
-                        "transition-all duration-200",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                >
-                    {isDownloading ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            Downloading & Cropping...
-                        </>
-                    ) : (
-                        <>
-                            <Download className="w-4 h-4" />
-                            Download Clip (9:16)
-                        </>
-                    )}
-                </button>
+                <div className="flex gap-3">
+                    {/* 16:9 Landscape */}
+                    <button
+                        onClick={() => handleDownload('16:9')}
+                        disabled={downloadingAR !== null}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2",
+                            "py-3 rounded-xl",
+                            "bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20",
+                            "border border-amber-500/30",
+                            "text-amber-400 font-medium text-sm",
+                            "hover:from-amber-500/30 hover:via-yellow-500/30 hover:to-amber-500/30",
+                            "hover:border-amber-500/50 hover:text-amber-300",
+                            "transition-all duration-200",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                    >
+                        {downloadingAR === '16:9' ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Monitor className="w-4 h-4" />
+                                Download 16:9
+                            </>
+                        )}
+                    </button>
+
+                    {/* 9:16 Portrait */}
+                    <button
+                        onClick={() => handleDownload('9:16')}
+                        disabled={downloadingAR !== null}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2",
+                            "py-3 rounded-xl",
+                            "bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20",
+                            "border border-amber-500/30",
+                            "text-amber-400 font-medium text-sm",
+                            "hover:from-amber-500/30 hover:via-yellow-500/30 hover:to-amber-500/30",
+                            "hover:border-amber-500/50 hover:text-amber-300",
+                            "transition-all duration-200",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                    >
+                        {downloadingAR === '9:16' ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Smartphone className="w-4 h-4" />
+                                Download 9:16
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     )

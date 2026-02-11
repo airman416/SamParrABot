@@ -11,6 +11,8 @@ import {
     Users,
     Sparkles,
     AlertCircle,
+    Monitor,
+    Smartphone,
 } from 'lucide-react'
 import { ClipCard } from '@/components'
 import type { ViralClip } from '@/components/ClipCard'
@@ -44,6 +46,101 @@ interface RecentVideo {
     thumbnail: string
     url: string
     duration_minutes?: number
+}
+
+const TEST_VIDEO_ID = 'dQw4w9WgXcQ'
+const TEST_START = 30
+const TEST_DURATION = 20
+
+function TestDownloadButtons() {
+    const [downloadingAR, setDownloadingAR] = useState<'16:9' | '9:16' | null>(null)
+    const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
+
+    const handleTestDownload = async (aspectRatio: '16:9' | '9:16') => {
+        setDownloadingAR(aspectRatio)
+        try {
+            const response = await fetch(`${API_URL}/clip`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    video_id: TEST_VIDEO_ID,
+                    start_time: TEST_START,
+                    duration: TEST_DURATION,
+                    aspect_ratio: aspectRatio,
+                }),
+            })
+            if (!response.ok) throw new Error('Download failed')
+
+            const arLabel = aspectRatio === '9:16' ? 'portrait' : 'landscape'
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `test_clip_${arLabel}.mp4`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+        } catch (error) {
+            console.error('Test download error:', error)
+            alert('Test download failed. Is the backend running?')
+        } finally {
+            setDownloadingAR(null)
+        }
+    }
+
+    return (
+        <div className="flex gap-3">
+            <button
+                onClick={() => handleTestDownload('16:9')}
+                disabled={downloadingAR !== null}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-2",
+                    "py-2.5 rounded-xl text-sm font-medium",
+                    "bg-zinc-800 border border-zinc-700",
+                    "text-zinc-300 hover:text-amber-400 hover:border-amber-500/30",
+                    "transition-all duration-200",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+            >
+                {downloadingAR === '16:9' ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Downloading...
+                    </>
+                ) : (
+                    <>
+                        <Monitor className="w-4 h-4" />
+                        16:9 Landscape
+                    </>
+                )}
+            </button>
+            <button
+                onClick={() => handleTestDownload('9:16')}
+                disabled={downloadingAR !== null}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-2",
+                    "py-2.5 rounded-xl text-sm font-medium",
+                    "bg-zinc-800 border border-zinc-700",
+                    "text-zinc-300 hover:text-amber-400 hover:border-amber-500/30",
+                    "transition-all duration-200",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+            >
+                {downloadingAR === '9:16' ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Downloading...
+                    </>
+                ) : (
+                    <>
+                        <Smartphone className="w-4 h-4" />
+                        9:16 Portrait
+                    </>
+                )}
+            </button>
+        </div>
+    )
 }
 
 export default function ClipperPage() {
@@ -265,6 +362,31 @@ export default function ClipperPage() {
                             </div>
                         )}
                     </form>
+                )}
+
+                {/* Test Download Widget - dev only */}
+                {process.env.NODE_ENV === 'development' && (status === 'idle' || status === 'error') && (
+                    <div className="max-w-2xl mx-auto mb-12">
+                        <div className="rounded-2xl overflow-hidden bg-zinc-950 border border-dashed border-zinc-700">
+                            <div className="p-4 border-b border-zinc-800 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Test Download</span>
+                            </div>
+                            <div className="relative aspect-video bg-black">
+                                <iframe
+                                    src="https://www.youtube.com/embed/dQw4w9WgXcQ?start=30&rel=0"
+                                    title="Test Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    className="absolute inset-0 w-full h-full"
+                                />
+                            </div>
+                            <div className="p-4">
+                                <p className="text-zinc-500 text-xs mb-3">Test the 16:9 vs 9:16 crop on a sample clip (30s from start, 20s duration)</p>
+                                <TestDownloadButtons />
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* Recent MFM Episodes */}
