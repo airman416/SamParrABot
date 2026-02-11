@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, Suspense } from 'react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Brain, ArrowLeft, Zap, Youtube, Search as SearchIcon, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+import { Brain, ArrowLeft, Zap, Youtube, Search as SearchIcon, RefreshCw, Scissors } from 'lucide-react'
 import { SearchBar, LoadingState, ResultCard } from '@/components'
 import type { SearchResult, SearchPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -191,6 +192,26 @@ function SearchInterface() {
                   {label}
                 </div>
               ))}
+            </div>
+
+            {/* Viral Clip Generator CTA */}
+            <div className="mt-16">
+              <Link href="/clipper" className="group relative inline-flex items-center gap-3">
+                {/* Animated glow border */}
+                <span className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 opacity-60 blur-md group-hover:opacity-100 transition-opacity duration-500 animate-pulse" />
+                <span className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 opacity-40 group-hover:opacity-70 transition-opacity duration-300" />
+                <span className={cn(
+                  "relative flex items-center gap-3 px-8 py-4 rounded-2xl",
+                  "bg-black",
+                  "text-amber-400 font-semibold text-lg",
+                  "group-hover:text-amber-300",
+                  "transition-all duration-300"
+                )}>
+                  <Scissors className="w-5 h-5" />
+                  Viral Clip Generator
+                  <span className="ml-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-xs font-bold tracking-wider">NEW</span>
+                </span>
+              </Link>
             </div>
           </div>
         )}
