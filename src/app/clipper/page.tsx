@@ -325,8 +325,8 @@ export default function ClipperPage() {
                 {(status === 'idle' || status === 'error') && (
                     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mb-12">
                         <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/50 via-yellow-500/50 to-amber-500/50 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <div className="relative flex items-center bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden focus-within:border-amber-500/50 transition-colors">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/50 via-yellow-500/50 to-amber-500/50 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300" />
+                            <div className="relative flex items-center bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden transition-colors">
                                 <Youtube className="w-5 h-5 text-zinc-500 ml-5 flex-shrink-0" />
                                 <input
                                     type="text"
