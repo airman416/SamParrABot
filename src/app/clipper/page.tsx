@@ -37,6 +37,15 @@ const STATUS_MESSAGES: Record<string, { label: string; detail: string }> = {
     },
 }
 
+interface RecentVideo {
+    video_id: string
+    title: string
+    published: string
+    thumbnail: string
+    url: string
+    duration_minutes?: number
+}
+
 export default function ClipperPage() {
     const [youtubeUrl, setYoutubeUrl] = useState('')
     const [jobId, setJobId] = useState<string | null>(null)
@@ -44,6 +53,8 @@ export default function ClipperPage() {
     const [status, setStatus] = useState<JobStatus>('idle')
     const [clips, setClips] = useState<ViralClip[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [recentVideos, setRecentVideos] = useState<RecentVideo[]>([])
+    const [loadingRecent, setLoadingRecent] = useState(true)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
@@ -54,6 +65,24 @@ export default function ClipperPage() {
             if (pollRef.current) clearInterval(pollRef.current)
         }
     }, [])
+
+    // Fetch recent MFM videos on mount
+    useEffect(() => {
+        async function fetchRecent() {
+            try {
+                const res = await fetch(`${API_URL}/recent-videos?limit=8`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setRecentVideos(data.videos || [])
+                }
+            } catch {
+                // Silently fail - this is a nice-to-have
+            } finally {
+                setLoadingRecent(false)
+            }
+        }
+        fetchRecent()
+    }, [API_URL])
 
     const startPolling = useCallback(
         (id: string) => {
@@ -83,20 +112,18 @@ export default function ClipperPage() {
         [API_URL]
     )
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!youtubeUrl.trim()) return
-
+    const startAnalysis = useCallback(async (url: string) => {
         // Reset state
         setError(null)
         setClips([])
         setStatus('queued')
+        setYoutubeUrl(url)
 
         try {
             const res = await fetch(`${API_URL}/viral-clips`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ youtube_url: youtubeUrl.trim() }),
+                body: JSON.stringify({ youtube_url: url }),
             })
 
             if (!res.ok) {
@@ -112,6 +139,16 @@ export default function ClipperPage() {
             setStatus('error')
             setError(err instanceof Error ? err.message : 'Failed to start analysis')
         }
+    }, [API_URL, startPolling])
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!youtubeUrl.trim()) return
+        startAnalysis(youtubeUrl.trim())
+    }
+
+    const handleRecentVideoClick = (video: RecentVideo) => {
+        startAnalysis(video.url)
     }
 
     const handleReset = () => {
@@ -228,6 +265,92 @@ export default function ClipperPage() {
                             </div>
                         )}
                     </form>
+                )}
+
+                {/* Recent MFM Episodes */}
+                {(status === 'idle' || status === 'error') && recentVideos.length > 0 && (
+                    <div className="max-w-4xl mx-auto mb-12">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                                <Youtube className="w-4 h-4 text-red-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-white">Recent My First Million Episodes</h2>
+                                <p className="text-zinc-500 text-sm">Click any episode to instantly find viral clips</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {recentVideos.map((video) => (
+                                <button
+                                    key={video.video_id}
+                                    onClick={() => handleRecentVideoClick(video)}
+                                    className={cn(
+                                        "group relative rounded-xl overflow-hidden text-left",
+                                        "bg-zinc-900 border border-zinc-800",
+                                        "hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5",
+                                        "transition-all duration-300"
+                                    )}
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="relative aspect-video bg-zinc-800 overflow-hidden">
+                                        <img
+                                            src={video.thumbnail}
+                                            alt={video.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        {/* Duration badge */}
+                                        {video.duration_minutes && (
+                                            <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[10px] text-white font-medium">
+                                                {video.duration_minutes} min
+                                            </div>
+                                        )}
+                                        {/* Play overlay */}
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                                            <div className="w-10 h-10 rounded-full bg-amber-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
+                                                <Scissors className="w-5 h-5 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Title */}
+                                    <div className="p-3">
+                                        <p className="text-xs text-zinc-300 font-medium line-clamp-2 group-hover:text-amber-300 transition-colors leading-snug">
+                                            {video.title}
+                                        </p>
+                                        {video.published && (
+                                            <p className="text-[10px] text-zinc-600 mt-1.5">
+                                                {new Date(video.published).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Recent videos loading skeleton */}
+                {(status === 'idle') && loadingRecent && (
+                    <div className="max-w-4xl mx-auto mb-12">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-8 h-8 rounded-lg bg-zinc-800 animate-pulse" />
+                            <div className="h-5 w-48 bg-zinc-800 rounded animate-pulse" />
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800">
+                                    <div className="aspect-video bg-zinc-800 animate-pulse" />
+                                    <div className="p-3 space-y-2">
+                                        <div className="h-3 bg-zinc-800 rounded animate-pulse" />
+                                        <div className="h-3 bg-zinc-800 rounded animate-pulse w-2/3" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
 
                 {/* Processing State */}
