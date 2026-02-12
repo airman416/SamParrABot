@@ -39,6 +39,8 @@ const STATUS_MESSAGES: Record<string, { label: string; detail: string }> = {
     },
 }
 
+const PATIENCE_MESSAGE = 'Have patience — this takes time. I process large video segments (audio download, transcription, AI analysis). Feel free to leave this running in the background.'
+
 interface RecentVideo {
     video_id: string
     title: string
@@ -181,6 +183,16 @@ export default function ClipperPage() {
         fetchRecent()
     }, [API_URL])
 
+    const showCompleteNotification = useCallback(() => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return
+        if (Notification.permission === 'granted') {
+            new Notification('Viral Clip Generator', {
+                body: 'Your viral clips are ready!',
+                icon: '/favicon.ico',
+            })
+        }
+    }, [])
+
     const startPolling = useCallback(
         (id: string) => {
             if (pollRef.current) clearInterval(pollRef.current)
@@ -196,6 +208,7 @@ export default function ClipperPage() {
 
                     if (data.status === 'complete') {
                         setClips(data.clips)
+                        showCompleteNotification()
                         if (pollRef.current) clearInterval(pollRef.current)
                     } else if (data.status === 'error') {
                         setError(data.error || 'An unexpected error occurred')
@@ -206,8 +219,16 @@ export default function ClipperPage() {
                 }
             }, 3000)
         },
-        [API_URL]
+        [API_URL, showCompleteNotification]
     )
+
+    const requestNotificationPermission = useCallback(async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return
+        if (Notification.permission === 'granted') return
+        if (Notification.permission !== 'denied') {
+            await Notification.requestPermission()
+        }
+    }, [])
 
     const startAnalysis = useCallback(async (url: string) => {
         // Reset state
@@ -215,6 +236,9 @@ export default function ClipperPage() {
         setClips([])
         setStatus('queued')
         setYoutubeUrl(url)
+
+        // Request notification permission so we can notify when ready
+        requestNotificationPermission()
 
         try {
             const res = await fetch(`${API_URL}/viral-clips`, {
@@ -236,7 +260,7 @@ export default function ClipperPage() {
             setStatus('error')
             setError(err instanceof Error ? err.message : 'Failed to start analysis')
         }
-    }, [API_URL, startPolling])
+    }, [API_URL, startPolling, requestNotificationPermission])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -364,8 +388,8 @@ export default function ClipperPage() {
                     </form>
                 )}
 
-                {/* Test Download Widget */}
-                {(status === 'idle' || status === 'error') && (
+                {/* Test Download Widget - development only */}
+                {process.env.NODE_ENV === 'development' && (status === 'idle' || status === 'error') && (
                     <div className="max-w-2xl mx-auto mb-12">
                         <div className="rounded-2xl overflow-hidden bg-zinc-950 border border-dashed border-zinc-700">
                             <div className="p-4 border-b border-zinc-800 flex items-center gap-2">
@@ -486,6 +510,9 @@ export default function ClipperPage() {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">{statusInfo.label}</h2>
                         <p className="text-zinc-400 text-center max-w-md">{statusInfo.detail}</p>
+                        <p className="text-amber-500/80 text-sm text-center max-w-lg mt-4 px-4">
+                            {PATIENCE_MESSAGE}
+                        </p>
 
                         {/* Progress Steps */}
                         <div className="mt-10 space-y-3 w-full max-w-sm">
