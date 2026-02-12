@@ -50,9 +50,9 @@ interface RecentVideo {
     duration_minutes?: number
 }
 
-const TEST_VIDEO_ID = 'dQw4w9WgXcQ'
-const TEST_START = 30
-const TEST_DURATION = 20
+const TEST_VIDEO_ID = 'WR4vSnnlLew'
+const TEST_START = 85   // 1:25
+const TEST_DURATION = 64  // 1:25 - 2:29
 
 function TestDownloadButtons() {
     const [downloadingAR, setDownloadingAR] = useState<'16:9' | '9:16' | null>(null)
