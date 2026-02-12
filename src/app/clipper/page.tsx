@@ -413,7 +413,7 @@ export default function ClipperPage() {
                             </div>
                             <div className="relative aspect-video bg-black">
                                 <iframe
-                                    src="https://www.youtube.com/embed/dQw4w9WgXcQ?start=30&rel=0"
+                                    src={`https://www.youtube.com/embed/${TEST_VIDEO_ID}?start=85&rel=0`}
                                     title="Test Video"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                     allowFullScreen
