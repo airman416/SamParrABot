@@ -61,7 +61,7 @@ function TestDownloadButtons() {
     const handleTestDownload = async (aspectRatio: '16:9' | '9:16') => {
         setDownloadingAR(aspectRatio)
         try {
-            const response = await fetch(`${API_URL}/clip`, {
+            const startRes = await fetch(`${API_URL}/clip`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -71,10 +71,25 @@ function TestDownloadButtons() {
                     aspect_ratio: aspectRatio,
                 }),
             })
-            if (!response.ok) throw new Error('Download failed')
+            if (!startRes.ok) throw new Error('Failed to start download')
+
+            const { job_id } = await startRes.json()
+
+            let status: string
+            do {
+                await new Promise((r) => setTimeout(r, 1500))
+                const statusRes = await fetch(`${API_URL}/clip/${job_id}`)
+                if (!statusRes.ok) throw new Error('Failed to check status')
+                const data = await statusRes.json()
+                status = data.status
+                if (status === 'error') throw new Error(data.error || 'Download failed')
+            } while (status !== 'ready')
+
+            const fileRes = await fetch(`${API_URL}/clip/${job_id}/file`)
+            if (!fileRes.ok) throw new Error('Failed to fetch file')
 
             const arLabel = aspectRatio === '9:16' ? 'portrait' : 'landscape'
-            const blob = await response.blob()
+            const blob = await fileRes.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -85,7 +100,7 @@ function TestDownloadButtons() {
             document.body.removeChild(a)
         } catch (error) {
             console.error('Test download error:', error)
-            alert('Test download failed. Is the backend running?')
+            alert(error instanceof Error ? error.message : 'Test download failed. Is the backend running?')
         } finally {
             setDownloadingAR(null)
         }

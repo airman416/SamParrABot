@@ -26,19 +26,32 @@ export function ResultCard({ result, index }: ResultCardProps) {
         setIsClipping(true)
         try {
             const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
-            const response = await fetch(`${API_URL}/clip`, {
+            const startRes = await fetch(`${API_URL}/clip`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     video_id: videoId,
-                    start_time: timestamp
-                })
+                    start_time: timestamp,
+                }),
             })
+            if (!startRes.ok) throw new Error('Failed to start clip')
 
-            if (!response.ok) throw new Error('Clipping failed')
+            const { job_id } = await startRes.json()
 
-            // Trigger file download
-            const blob = await response.blob()
+            let status: string
+            do {
+                await new Promise((r) => setTimeout(r, 1500))
+                const statusRes = await fetch(`${API_URL}/clip/${job_id}`)
+                if (!statusRes.ok) throw new Error('Failed to check status')
+                const data = await statusRes.json()
+                status = data.status
+                if (status === 'error') throw new Error(data.error || 'Clipping failed')
+            } while (status !== 'ready')
+
+            const fileRes = await fetch(`${API_URL}/clip/${job_id}/file`)
+            if (!fileRes.ok) throw new Error('Failed to fetch file')
+
+            const blob = await fileRes.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -48,12 +61,10 @@ export function ResultCard({ result, index }: ResultCardProps) {
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
 
-            // Open Caption Modal
             setShowCaptionModal(true)
-
         } catch (error) {
             console.error('Clipping error:', error)
-            alert('Failed to generate clip. Please try again.')
+            alert(error instanceof Error ? error.message : 'Failed to generate clip. Please try again.')
         } finally {
             setIsClipping(false)
         }
