@@ -38,14 +38,18 @@ export function ResultCard({ result, index }: ResultCardProps) {
 
             const { job_id } = await startRes.json()
 
+            const POLL_INTERVAL_MS = 3000
+            const MAX_POLLS = 150  // ~7.5 min
             let status: string
+            let polls = 0
             do {
-                await new Promise((r) => setTimeout(r, 1500))
+                await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
                 const statusRes = await fetch(`${API_URL}/clip/${job_id}`)
                 if (!statusRes.ok) throw new Error('Failed to check status')
                 const data = await statusRes.json()
                 status = data.status
                 if (status === 'error') throw new Error(data.error || 'Clipping failed')
+                if (++polls >= MAX_POLLS) throw new Error('Download timed out. Please try again.')
             } while (status !== 'ready')
 
             const fileRes = await fetch(`${API_URL}/clip/${job_id}/file`)

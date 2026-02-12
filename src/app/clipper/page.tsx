@@ -11,8 +11,6 @@ import {
     Users,
     Sparkles,
     AlertCircle,
-    Monitor,
-    Smartphone,
 } from 'lucide-react'
 import { ClipCard } from '@/components'
 import type { ViralClip } from '@/components/ClipCard'
@@ -55,11 +53,11 @@ const TEST_START = 85   // 1:25
 const TEST_DURATION = 64  // 1:25 - 2:29
 
 function TestDownloadButtons() {
-    const [downloadingAR, setDownloadingAR] = useState<'16:9' | '9:16' | null>(null)
+    const [downloading, setDownloading] = useState(false)
     const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
 
-    const handleTestDownload = async (aspectRatio: '16:9' | '9:16') => {
-        setDownloadingAR(aspectRatio)
+    const handleTestDownload = async () => {
+        setDownloading(true)
         try {
             const startRes = await fetch(`${API_URL}/clip`, {
                 method: 'POST',
@@ -68,32 +66,34 @@ function TestDownloadButtons() {
                     video_id: TEST_VIDEO_ID,
                     start_time: TEST_START,
                     duration: TEST_DURATION,
-                    aspect_ratio: aspectRatio,
                 }),
             })
             if (!startRes.ok) throw new Error('Failed to start download')
 
             const { job_id } = await startRes.json()
 
+            const POLL_INTERVAL_MS = 3000
+            const MAX_POLLS = 150  // ~7.5 min
             let status: string
+            let polls = 0
             do {
-                await new Promise((r) => setTimeout(r, 1500))
+                await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
                 const statusRes = await fetch(`${API_URL}/clip/${job_id}`)
                 if (!statusRes.ok) throw new Error('Failed to check status')
                 const data = await statusRes.json()
                 status = data.status
                 if (status === 'error') throw new Error(data.error || 'Download failed')
+                if (++polls >= MAX_POLLS) throw new Error('Download timed out. Please try again.')
             } while (status !== 'ready')
 
             const fileRes = await fetch(`${API_URL}/clip/${job_id}/file`)
             if (!fileRes.ok) throw new Error('Failed to fetch file')
 
-            const arLabel = aspectRatio === '9:16' ? 'portrait' : 'landscape'
             const blob = await fileRes.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `test_clip_${arLabel}.mp4`
+            a.download = 'test_clip.mp4'
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -102,61 +102,35 @@ function TestDownloadButtons() {
             console.error('Test download error:', error)
             alert(error instanceof Error ? error.message : 'Test download failed. Is the backend running?')
         } finally {
-            setDownloadingAR(null)
+            setDownloading(false)
         }
     }
 
     return (
-        <div className="flex gap-3">
-            <button
-                onClick={() => handleTestDownload('16:9')}
-                disabled={downloadingAR !== null}
-                className={cn(
-                    "flex-1 flex items-center justify-center gap-2",
-                    "py-2.5 rounded-xl text-sm font-medium",
-                    "bg-zinc-800 border border-zinc-700",
-                    "text-zinc-300 hover:text-amber-400 hover:border-amber-500/30",
-                    "transition-all duration-200",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-            >
-                {downloadingAR === '16:9' ? (
-                    <>
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Downloading...
-                    </>
-                ) : (
-                    <>
-                        <Monitor className="w-4 h-4" />
-                        16:9 Landscape
-                    </>
-                )}
-            </button>
-            <button
-                onClick={() => handleTestDownload('9:16')}
-                disabled={downloadingAR !== null}
-                className={cn(
-                    "flex-1 flex items-center justify-center gap-2",
-                    "py-2.5 rounded-xl text-sm font-medium",
-                    "bg-zinc-800 border border-zinc-700",
-                    "text-zinc-300 hover:text-amber-400 hover:border-amber-500/30",
-                    "transition-all duration-200",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-            >
-                {downloadingAR === '9:16' ? (
-                    <>
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Downloading...
-                    </>
-                ) : (
-                    <>
-                        <Smartphone className="w-4 h-4" />
-                        9:16 Portrait
-                    </>
-                )}
-            </button>
-        </div>
+        <button
+            onClick={handleTestDownload}
+            disabled={downloading}
+            className={cn(
+                "w-full flex items-center justify-center gap-2",
+                "py-2.5 rounded-xl text-sm font-medium",
+                "bg-zinc-800 border border-zinc-700",
+                "text-zinc-300 hover:text-amber-400 hover:border-amber-500/30",
+                "transition-all duration-200",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+        >
+            {downloading ? (
+                <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Downloading...
+                </>
+            ) : (
+                <>
+                    <Download className="w-4 h-4" />
+                    Download
+                </>
+            )}
+        </button>
     )
 }
 
@@ -347,7 +321,7 @@ export default function ClipperPage() {
                             { icon: Youtube, label: 'Paste YouTube link' },
                             { icon: Users, label: 'Speaker diarization' },
                             { icon: Sparkles, label: 'AI viral detection' },
-                            { icon: Download, label: 'Download 9:16 clips' },
+                            { icon: Download, label: 'Download 16:9 clips' },
                         ].map(({ icon: Icon, label }) => (
                             <div
                                 key={label}
@@ -421,7 +395,7 @@ export default function ClipperPage() {
                                 />
                             </div>
                             <div className="p-4">
-                                <p className="text-zinc-500 text-xs mb-3">Test the 16:9 vs 9:16 crop on a sample clip (30s from start, 20s duration)</p>
+                                <p className="text-zinc-500 text-xs mb-3">Test download on a sample clip (1:25–2:29, highest quality)</p>
                                 <TestDownloadButtons />
                             </div>
                         </div>

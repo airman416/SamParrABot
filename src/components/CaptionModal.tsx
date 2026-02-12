@@ -70,7 +70,7 @@ export function CaptionModal({ isOpen, onClose, videoId, timestamp }: CaptionMod
                         <Check className="w-6 h-6 text-green-500" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-1">Clip Downloaded!</h3>
-                    <p className="text-zinc-400 text-sm">Your 9:16 vertical video is ready.</p>
+                    <p className="text-zinc-400 text-sm">Your clip is ready.</p>
                 </div>
 
                 <div className="space-y-4">
