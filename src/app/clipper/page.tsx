@@ -377,8 +377,8 @@ export default function ClipperPage() {
                     </form>
                 )}
 
-                {/* Test Download Widget */}
-                {(status === 'idle' || status === 'error') && (
+                {/* Test Download Widget - development only */}
+                {process.env.NODE_ENV === 'development' && (status === 'idle' || status === 'error') && (
                     <div className="max-w-2xl mx-auto mb-12">
                         <div className="rounded-2xl overflow-hidden bg-zinc-950 border border-dashed border-zinc-700">
                             <div className="p-4 border-b border-zinc-800 flex items-center gap-2">
