@@ -31,7 +31,8 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
         setDownloadingAR(aspectRatio)
         try {
             const API_URL = process.env.NEXT_PUBLIC_CLIPPING_API_URL || 'http://localhost:8000'
-            const response = await fetch(`${API_URL}/clip`, {
+
+            const startRes = await fetch(`${API_URL}/clip`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -41,11 +42,25 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
                     aspect_ratio: aspectRatio,
                 }),
             })
+            if (!startRes.ok) throw new Error('Failed to start download')
 
-            if (!response.ok) throw new Error('Download failed')
+            const { job_id } = await startRes.json()
+
+            let status: string
+            do {
+                await new Promise((r) => setTimeout(r, 1500))
+                const statusRes = await fetch(`${API_URL}/clip/${job_id}`)
+                if (!statusRes.ok) throw new Error('Failed to check status')
+                const data = await statusRes.json()
+                status = data.status
+                if (status === 'error') throw new Error(data.error || 'Download failed')
+            } while (status !== 'ready')
+
+            const fileRes = await fetch(`${API_URL}/clip/${job_id}/file`)
+            if (!fileRes.ok) throw new Error('Failed to fetch file')
 
             const arLabel = aspectRatio === '9:16' ? 'portrait' : 'landscape'
-            const blob = await response.blob()
+            const blob = await fileRes.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -56,7 +71,7 @@ export function ClipCard({ clip, videoId, index }: ClipCardProps) {
             document.body.removeChild(a)
         } catch (error) {
             console.error('Download error:', error)
-            alert('Failed to download clip. Please try again.')
+            alert(error instanceof Error ? error.message : 'Failed to download clip. Please try again.')
         } finally {
             setDownloadingAR(null)
         }
