@@ -6,6 +6,8 @@
 
 ## What is this?
 
+![Sam Parr asks](/ask.jpeg)
+
 **Sam's Brain** is an intelligent search engine that lets you search through Sam Parr's quotes and statements from the My First Million podcast using natural language. Instead of keyword matching, it uses:
 
 - **🤖 Agentic Query Expansion** - Your question is analyzed and expanded into multiple semantic search phrases
