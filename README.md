@@ -1,108 +1,122 @@
 # SamGPT (Sam's Brain) 🧠
 
-> AI-native search and clip workflow over **My First Million** podcast transcripts.
+> Ask one question. Instantly surface the best Sam Parr moments, with timestamped proof.
 
 ![Sam Parr - From Hotdogs to $30M](/image.png)
-
-## What this is
-
 ![Sam Parr asks](/ask.jpeg)
 
-`SamGPT` is a full-stack AI product that lets users ask natural-language questions and retrieve timestamped, context-rich quotes from Sam Parr episodes.
+## Why This Exists
 
-It combines:
-- **Intent-aware query planning** (classify query intent, then generate targeted search phrases)
-- **Embedding-based semantic retrieval** (not keyword match)
-- **Multi-angle ranking** (boost chunks matched by multiple generated phrases)
-- **Creator workflow support** (caption generation + external viral-clip pipeline integration)
+Podcast content is high-value and high-volume, but hard to search when you need answers fast.
 
-## Architecture Diagram
+`SamGPT` turns long-form conversations into an AI-powered discovery engine:
+- Find the exact quote, not just the episode.
+- Jump to the exact timestamp, not just a summary.
+- Go from research to publishable clips in one workflow.
 
-```mermaid
-flowchart LR
-    U[User in Browser]
-
-    subgraph FE[Frontend]
-      N["Next.js 16 App Router + React 19 + Tailwind CSS"]
-      P1["POST /api/search"]
-      P2["POST /api/caption"]
-      C["/clipper page"]
-    end
-
-    subgraph AI[OpenAI API]
-      O1[Chat Completions API<br/>gpt-4o-mini]
-      O2[Embeddings API<br/>text-embedding-3-small 512d]
-    end
-
-    subgraph DB[Supabase]
-      S1[PostgreSQL + pgvector]
-      S2[RPC: match_transcripts]
-      S3[episodes table]
-    end
-
-    subgraph CLIP[External Clipping Service]
-      X1[Clipping API<br/>NEXT_PUBLIC_CLIPPING_API_URL]
-      X2[Transcript + diarization pipeline<br/>AssemblyAI]
-      X3[Clip rendering/download jobs]
-    end
-
-    U -->|search query| N
-    N --> P1
-    P1 -->|1) intent classify| O1
-    P1 -->|2) phrase expansion| O1
-    P1 -->|3) embed each phrase| O2
-    P1 -->|4) vector RPC search| S2
-    S2 --> S1
-    P1 -->|5) hydrate episode titles| S3
-    P1 -->|ranked quotes + timestamps + URLs| N
-    N -->|results UI| U
-
-    U -->|caption request| N
-    N --> P2
-    P2 -->|caption generation| O1
-    P2 -->|caption + hashtags| N
-
-    U -->|YouTube URL| C
-    C -->|start/poll jobs| X1
-    X1 --> X2
-    X1 --> X3
-    X1 -->|top viral clips + download links| C
-```
-
-## Data Flow (Search Pipeline)
-
-1. **`POST /api/search` receives query** from the Next.js client.
-2. **OpenAI `gpt-4o-mini` classifies intent** into one of: `CURATION`, `FACT_CHECK`, `CONTRARIAN`, `ADVICE`, `GENERAL`.
-3. **OpenAI `gpt-4o-mini` expands query** into 3-15 specialized semantic phrases.
-4. **OpenAI `text-embedding-3-small` embeds each phrase** (`512` dimensions).
-5. **Supabase RPC `match_transcripts` (pgvector)** retrieves nearest transcript chunks per phrase.
-6. **Server-side aggregation/ranking** boosts chunks that match from multiple phrase angles.
-7. **Episode metadata join** (from `episodes` table) enriches results for UI display.
-8. **UI returns timestamped quotes + YouTube links** for immediate playback/context.
-
-## Tech Stack
-
-- **Application framework**: Next.js `16` (App Router), React `19`, TypeScript
-- **Styling/UI**: Tailwind CSS `v4`, Headless UI, Lucide icons
-- **LLM + embeddings**: OpenAI `gpt-4o-mini` + `text-embedding-3-small`
-- **Vector data layer**: Supabase (PostgreSQL + `pgvector`) via RPC search
-- **Creator tools**: Caption API route + external clipping API integration (`/viral-clips`, `/clip`, `/recent-videos`)
-
-## Why this stands out (recruiter lens)
-
-- **Production-shaped AI architecture**: hybrid LLM planning + vector retrieval + deterministic ranking logic
-- **Clear system boundaries**: frontend, API orchestration, model APIs, vector DB, async media pipeline
-- **Practical product execution**: search UX, timestamp linking, caption generation, clip creation workflow
-- **Strong extensibility surface**: prompt strategies per intent, pluggable retrieval params, external job APIs
-
-## Example Queries
-
+Example prompts:
 - *"Find where I found something really funny."*
 - *"Any cool predictions I got right that I can talk about today?"*
 - *"What's a guest idea that actually impressed me?"*
 - *"Find some cool ideas I can repurpose for short form."*
 
-## Local Setup
+## How It Works
+
+Under the hood, this is a modern retrieval architecture with clear layers and strong separation of concerns.
+
+```mermaid
+flowchart TD
+    USER[End User - asks question]
+    APP[Web App - captures query and renders results]
+    ORCH[AI Orchestration - coordinates the retrieval flow]
+    LLM[LLM Layer - intent classification and query expansion]
+    VECTORDB[Vector Database - semantic similarity search]
+    RANK[Ranking Layer - re-scores and prioritizes best hits]
+    CLIP[Async Pipeline - long running clip generation tasks]
+
+    USER --> APP
+    APP --> ORCH
+    ORCH --> LLM
+    ORCH --> VECTORDB
+    VECTORDB --> RANK
+    RANK --> APP
+    APP --> CLIP
+    CLIP --> APP
+```
+
+### LLM + Semantic Retrieval Deep Dive
+
+```mermaid
+flowchart TD
+    Q[User asks a question]
+    I[LLM understands intent and goal]
+    E[LLM rewrites into better search phrases]
+    P[System builds 3 to 15 query phrases]
+    M[Each phrase is converted to embeddings]
+    V[Vector DB finds similar transcript chunks]
+    A[Backend merges and deduplicates matches]
+    R[Ranking boosts chunks matched multiple times]
+    O[User gets top quotes with timestamps]
+
+    Q --> I
+    I --> E
+    E --> P
+    P --> M
+    M --> V
+    V --> A
+    A --> R
+    R --> O
+```
+
+### Async Clip + Download Pipeline (External Backend)
+
+This pipeline is handled by an external backend service (configured via `NEXT_PUBLIC_CLIPPING_API_URL`), not by this repository.
+
+```mermaid
+flowchart TD
+    U[User pastes a YouTube link]
+    FE[Frontend starts a background clip job]
+    API[External backend coordinates the pipeline]
+    DL[Worker downloads source media]
+    TR[Worker transcribes audio and labels speakers]
+    AI[Model layer picks high potential viral moments]
+    RENDER[Worker renders final clip segments]
+    STORE[Rendered MP4 files are stored]
+    READY[Backend marks job complete and returns clip list]
+    FILE[Download endpoint streams selected clip file]
+
+    U --> FE
+    FE --> API
+    API --> DL
+    DL --> TR
+    TR --> AI
+    AI --> RENDER
+    RENDER --> STORE
+    STORE --> READY
+    READY --> API
+    API --> FE
+    FE --> FILE
+```
+
+## Why It Matters
+
+This project is built for people who care about speed, signal, and shipping:
+- **Faster insight extraction**: ask naturally, get precise moments with context.
+- **Higher content leverage**: turn long episodes into short-form opportunities quickly.
+- **Production-ready AI stack**: orchestration layer, LLM layer, vector retrieval, deterministic ranking, async jobs.
+- **Real user experience**: polished interface, clear loading states, direct links, and clip workflows.
+
+### Technology Used
+
+- **App framework**: Next.js `16`, React `19`, TypeScript
+- **UI system**: Tailwind CSS `v4`, Headless UI, Lucide icons
+- **LLM + embeddings**: OpenAI `gpt-4o-mini`, `text-embedding-3-small`
+- **Data platform**: Supabase PostgreSQL + `pgvector`
+- **Media pipeline integration**: external async clipping service (`/viral-clips`, `/clip`, `/recent-videos`)
+
+## Get Started
+
+Run it locally:
 
 ```bash
 npm install
@@ -117,6 +131,8 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_anon_or_service_key
 NEXT_PUBLIC_CLIPPING_API_URL=http://localhost:8000
 ```
+
+Then open the app, ask a real question, and explore the moments worth sharing.
 
 ---
 
